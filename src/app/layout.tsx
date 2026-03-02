@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,11 +25,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="ko" className="scroll-smooth" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} mx-auto max-w-3xl px-6 antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <header className="flex items-center justify-between py-10">
+            <nav className="flex gap-6 font-medium">
+              <a href="/" className="hover:text-indigo-500 transition">Home</a>
+              <a href="/blog" className="hover:text-indigo-500 transition">Blog</a>
+            </nav>
+            <div className='flex gap-5 items-center'>
+              <ThemeToggle />
+              <div className="text-sm font-bold tracking-tighter">MRLEE.DEV</div>
+            </div>
+          </header>
+          
+          <main>{children}</main>
+
+          <footer className="mt-20 border-t border-zinc-100 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
+            © {new Date().getFullYear()} mrlee323. Built with Next.js
+          </footer>
+        </ThemeProvider>
       </body>
     </html>
   );
