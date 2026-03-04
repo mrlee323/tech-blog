@@ -11,10 +11,10 @@ export default async function HomePage() {
       {/* Hero Section */}
       <section className="space-y-4">
         <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">
-          Frontend Engineer <span className="text-zinc-500">(4 YoE)</span>
+          mrlee<span className="text-zinc-500">의 블로그</span>
         </h1>
         <p className="max-w-[600px] text-zinc-500 md:text-xl/relaxed dark:text-zinc-400">
-          대규모 트래픽 최적화와 AI 기반 자동화로 비즈니스 가치를 극대화합니다.
+          복잡도를 다루는 프론트엔드 엔지니어의 기록. 코드, 설계, 그리고 AI와 함께하는 실무 이야기.
         </p>
       </section>
 
