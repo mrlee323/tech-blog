@@ -43,7 +43,17 @@ export default function RootLayout({
           <main>{children}</main>
 
           <footer className="mt-20 border-t border-zinc-100 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
-            © {new Date().getFullYear()} mrlee323. Built with Next.js
+            <p>© {new Date().getFullYear()} mrlee323. Built with Next.js</p>
+            <p className="mt-2">
+              <a
+                href="https://mrlee323.github.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-indigo-500 transition"
+              >
+                이전 블로그 보기 →
+              </a>
+            </p>
           </footer>
         </ThemeProvider>
       </body>
