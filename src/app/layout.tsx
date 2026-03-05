@@ -32,6 +32,7 @@ export default function RootLayout({
             <nav className="flex gap-6 font-medium">
               <a href="/" className="hover:text-indigo-500 transition">Home</a>
               <a href="/blog" className="hover:text-indigo-500 transition">Blog</a>
+              <a href="/admin/write" className="hover:text-indigo-500 transition">Write</a>
             </nav>
             <div className='flex gap-5 items-center'>
               <ThemeToggle />
