@@ -1,0 +1,175 @@
+---
+title: "결제사 추가에 유연한 구조 설계 — Factory 패턴 적용기"
+date: "2026-04-11"
+description: "새로운 결제사가 추가될 때마다 두려웠다. 어디를 건드려야 할지 알 수 없었고, 건드리면 반드시 어딘가가 터졌다."
+---
+
+---
+
+## 발단 — 결제사 하나 추가했을 뿐인데
+
+어느 날 기획팀에서 말했다. "해외 결제 추가해야 해요."
+
+듣는 순간 머릿속이 복잡해졌다. 이유는 단순했다. 결제 로직이 이런 구조였기 때문이다.
+
+```javascript
+const callConfirmCheckout = async () => {
+  if (payResult.pg === 'KCP') {
+    // KCP 전용 폼 생성 로직 30줄
+    window.call_pay_form(createKCPForm(params));
+  } else if (payResult.method === 'TRANSFER') {
+    // 토스 전용 로직 20줄
+    await tossQuickPayment.requestPayment({ ...payResult });
+  } else if (payResult.pg === 'NAVER' || payResult.pg === 'KAKAO') {
+    // 아임포트 전용 로직 25줄
+    IMP.request_pay(params, requestPayCallbackIMP);
+  }
+  // 새 결제사 추가 = 이 함수에 else if 하나 더
+};
+```
+
+결제사가 3개일 때는 버텼다. 근데 해외 결제(Alipay, WeChat)까지 추가되면 이 함수는 200줄이 넘어가는 괴물이 된다. 그리고 3개월 뒤에 이 코드를 다시 열면, 나조차 어디서부터 읽어야 할지 모를 것이다.
+
+뭔가 바꿔야 했다.
+
+---
+
+## 고민 — 어떤 패턴을 선택할까
+
+리팩토링 방향을 잡기 전에 선택지를 놓고 비교했다.
+
+**선택지 1 — 그냥 함수 분리**
+
+`handleKCPPayment()`, `handleTossPayment()` 식으로 함수만 나누는 방법. 빠르고 쉽지만, 결국 어딘가에서 `if (pg === 'KCP')` 분기가 살아있다. 근본적인 해결이 아니다.
+
+**선택지 2 — Strategy 패턴**
+
+각 결제사를 전략 객체로 만드는 방법. 괜찮지만, 어떤 전략을 선택할지 결정하는 로직이 여전히 외부에 있어야 한다. 호출하는 쪽에서 `new KCPStrategy()` 같은 코드를 직접 써야 한다는 뜻이다.
+
+**선택지 3 — Factory 패턴**
+
+"어떤 객체를 만들지" 결정하는 책임을 Factory에 위임하는 방법. 호출하는 쪽은 pg 타입만 넘기면 된다. 새 결제사가 추가되면 Factory에 한 줄만 추가하면 끝이다.
+
+우리 상황에 Factory가 맞았던 이유는 명확했다.
+
+모든 결제사의 **큰 흐름은 동일**했기 때문이다.
+
+1. 서버에 결제 정보 전달 → PG사 데이터 수신
+2. 결제 폼 생성 → PG사에 전달
+3. PG사 응답 처리 → 서버에 전달
+4. 최종 결제 상태 → 프론트에 노출
+
+다른 건 딱 하나, **세부 구현**이었다. 폼 구조, 모바일 처리 방식, 응답 형태. 이건 PG사마다 달랐지만 어디에 다른지는 명확했다.
+
+공통 구조는 추상 클래스로 강제하고, 다른 부분만 각 클래스에서 구현하면 된다. Factory가 인스턴스 생성을 담당하면 호출부는 깨끗해진다.
+
+---
+
+## 구현 — 3단계로 뜯어고쳤다
+
+### 1단계 — 공통 인터페이스 정의
+
+모든 결제사가 반드시 구현해야 하는 메서드를 추상 클래스로 정의했다. 공통 로직(폼 생성, 에러 처리)은 여기서 한 번만 작성했다.
+
+```javascript
+class PaymentProviderBase {
+  constructor(config) {
+    this.locale = config.locale;
+    this.handlePaymentProcessStatus = config.handlePaymentProcessStatus;
+  }
+
+  createFormElement(formData) {
+    const form = document.createElement('form');
+    Object.entries(formData).forEach(([key, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    return form;
+  }
+
+  paymentConfirmError(error) {
+    this.handlePaymentProcessStatus(false);
+  }
+
+  requestPayment(payResult) {
+    throw new Error('requestPayment must be implemented');
+  }
+}
+```
+
+### 2단계 — PG사별 클래스 구현
+
+각 클래스는 "다른 부분"만 구현한다. KCP는 KCP 폼 구조만, Toss는 Toss 호출 방식만.
+
+```javascript
+class KCPPaymentProvider extends PaymentProviderBase {
+  requestPayment(payResult) {
+    const form = this.createFormElement(this.buildKCPParams(payResult));
+    this.isMobile()
+      ? window.call_pay_form(form)
+      : window.KCP_Pay_Execute_Web(form);
+  }
+}
+
+class TossPaymentProvider extends PaymentProviderBase {
+  async requestPayment(payResult) {
+    await tossQuickPayment.requestPayment({ ...payResult });
+  }
+}
+```
+
+### 3단계 — Factory로 생성 책임 위임
+
+```javascript
+class PaymentProviderFactory {
+  static providers = {
+    kcp: KCPPaymentProvider,
+    toss: TossPaymentProvider,
+    nice: NicePaymentProvider,
+    imp: IMPPaymentProvider,
+    alipay: AbroadCheckoutPaymentProvider,
+    wechat: AbroadCheckoutPaymentProvider,
+  };
+
+  static createProvider(type, config) {
+    const ProviderClass = this.providers[type.toLowerCase()];
+    if (!ProviderClass) throw new Error(`지원하지 않는 결제사: ${type}`);
+    return new ProviderClass(config);
+  }
+}
+
+// 호출부 — 리팩토링 후
+const provider = PaymentProviderFactory.createProvider(pg, config);
+provider.requestPayment(payResult);
+```
+
+---
+
+## 결과 — 달라진 것들
+
+**새 결제사 추가할 때**
+- Before: `callConfirmCheckout` 함수 전체 파악 → 조건문 추가 → 사이드 이펙트 확인
+- After: 새 클래스 하나 작성 → Factory에 한 줄 추가. 끝.
+
+**버그가 났을 때**
+- Before: 어느 PG사 로직인지 200줄짜리 함수에서 찾아야 함
+- After: 해당 PG사 클래스 파일 하나만 열면 됨
+
+**수치로**
+- 결제 성공률 100% 달성 (기존 간헐적 오류 20% → 0%)
+- 신규 결제 수단 도입 기간 3일 단축
+- 결제 관련 CS 인입 30% 감소
+
+---
+
+## 마치며 — 패턴은 목적이 아니라 수단이다
+
+리팩토링 전에 "Factory 패턴을 써야지" 하고 시작하지 않았다. "결제사 추가할 때마다 겁나는 이 구조를 어떻게 바꿀까" 에서 시작했고, 그 답이 Factory였을 뿐이다.
+
+패턴은 외워서 쓰는 게 아니라, 문제를 명확히 정의했을 때 자연스럽게 선택되는 것 같다.
+
+다음엔 결제 상태 추적을 위해 도입한 Exponential Backoff 재시도 로직을 써볼 예정이다.
