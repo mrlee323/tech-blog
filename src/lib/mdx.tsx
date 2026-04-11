@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import { mdxComponents } from '@/components/mdx'
+import rehypeShikiFromHighlighter from '@shikijs/rehype/core';
+import { createHighlighter } from 'shiki';
 
 // 마크다운 파일이 저장된 경로 설정
 const POSTS_PATH = path.join(process.cwd(), 'src/contents/posts');
@@ -23,6 +25,11 @@ export async function getPostBySlug(slug: string) {
   const fileContent = fs.readFileSync(filePath, 'utf8');
 
   // 3. compileMDX를 통해 텍스트를 리액트 컴포넌트로 변환
+  const highlighter = await createHighlighter({
+    themes: ['github-dark'],
+    langs: ['javascript', 'typescript', 'tsx', 'jsx', 'bash', 'json', 'css', 'html'],
+  });
+
   const { content, frontmatter } = await compileMDX<{
     title: string;
     date: string;
@@ -30,13 +37,17 @@ export async function getPostBySlug(slug: string) {
   }>({
     source: fileContent,
     options: { 
-      parseFrontmatter: true, // 제목, 날짜 등 메타데이터 추출 활성화
+      parseFrontmatter: true,
       mdxOptions: {
-      
-        // 여기에 rehypeShiki 같은 플러그인을 추가할 수 있습니다.
+        rehypePlugins: [
+          [
+            rehypeShikiFromHighlighter,
+            highlighter,
+            { theme: 'github-dark' },
+          ],
+        ],
       }
     },
-    // 마크다운 내에서 사용할 커스텀 컴포넌트들
     components: {
       ...mdxComponents,
       h1: (props) => <h1 className="text-3xl font-bold mt-8 mb-4" {...props} />,

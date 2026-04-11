@@ -19,3 +19,26 @@ html.dark {
   --color-background: #0a0a0a;
   --color-foreground: #ededed;
 }
+
+/* Shiki 코드 블록 — 항상 다크 */
+.shiki,
+.shiki span {
+  color: var(--shiki-dark, var(--shiki-light));
+  background-color: var(--shiki-dark-bg, var(--shiki-light-bg));
+}
+
+html.dark .shiki,
+html.dark .shiki span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+.shiki {
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  margin: 1.5rem 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+}

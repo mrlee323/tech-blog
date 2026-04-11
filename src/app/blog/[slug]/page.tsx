@@ -51,11 +51,22 @@ export default async function PostPage({ params }: Props) {
         <hr className="my-10 border-zinc-100 dark:border-zinc-800" />
 
         {/* 본문 - prose 클래스로 스타일링 제어 */}
-        <section className="prose prose-zinc dark:prose-invert max-w-none 
-          prose-headings:scroll-mt-20 
-          prose-headings:font-bold 
+        <section className="
+          prose prose-zinc dark:prose-invert max-w-none
+          prose-base leading-8
+          prose-headings:scroll-mt-20
+          prose-headings:font-bold
+          prose-headings:tracking-tight
+          prose-h2:text-2xl prose-h2:mt-14 prose-h2:mb-4
+          prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3
+          prose-p:text-[1.0625rem] prose-p:leading-8 prose-p:text-zinc-700 dark:prose-p:text-zinc-300
+          prose-li:text-[1.0625rem] prose-li:leading-8 prose-li:text-zinc-700 dark:prose-li:text-zinc-300
+          prose-strong:text-zinc-900 dark:prose-strong:text-zinc-100
           prose-a:text-indigo-500 prose-a:no-underline hover:prose-a:underline
-          prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800">
+          prose-code:text-sm prose-code:bg-zinc-100 prose-code:dark:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-normal
+          prose-pre:bg-transparent prose-pre:p-0 prose-pre:my-6
+          prose-hr:border-zinc-200 dark:prose-hr:border-zinc-700
+        ">
           {content}
         </section>
 
